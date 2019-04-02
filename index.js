@@ -21,8 +21,10 @@ const AES = require('./lib/aes.js')
 const publicRabbitHost = process.env.RABBIT_PUBLIC_SERVER || 'localhost'
 const publicRabbitUsername = process.env.RABBIT_PUBLIC_USERNAME || ''
 const publicRabbitPassword = process.env.RABBIT_PUBLIC_PASSWORD || ''
-const privateRabbitEncryptionKey =
-  process.env.RABBIT_PRIVATE_ENCRYPTION_KEY || ''
+
+const requestEncryptionKey =
+  process.env.REQUEST_ENCRYPTION_KEY || ''
+const crypto = new AES({ password: requestEncryptionKey })
 
 /* Helps us to build the RabbitMQ connection string */
 function buildConnectionString (host, username, password) {
@@ -143,10 +145,8 @@ function validateRequest (
     let walletRequest = {}
 
     if (!atomicAmount) {
-      return reject('Invalid amount supplied')
+      reject(new Error('Invalid amount supplied'))
     }
-
-    const amount = atomicAmount / Math.pow(10, Config.coinDecimals)
 
     /* Validate that the caller has supplied a valid CryptoNote address
      for us to send funds to */
@@ -155,14 +155,14 @@ function validateRequest (
       cryptoUtils.decodeAddress(address)
       walletRequest.address = address
     } catch (e) {
-      return reject('Invalid address supplied')
+      reject(new Error('Invalid address supplied'))
     }
 
     /* Verify that the caller supplied us with an acceptable callback
      URL that we'll post back to later */
     if (callback) {
       if (callback.substring(0, 4).toLowerCase() !== 'http') {
-        return reject('Invalid callback URL supplied')
+        reject(new Error('Invalid callback URL supplied'))
       }
     }
 
@@ -170,7 +170,7 @@ function validateRequest (
 
     /* Verify that the caller has supplied a valid amount to request */
     if (!atomicAmount || atomicAmount === 0 || atomicAmount < 0) {
-      return reject('Invalid amount requested')
+      reject(new Error('Invalid amount requested'))
     }
 
     walletRequest.amount = atomicAmount
@@ -183,7 +183,7 @@ function validateRequest (
       /* If the caller requested 0 or less or more confirmations than we
        allow, we're going to reject their request */
       if (confirmations < 0 || confirmations > Config.maximumConfirmations) {
-        return reject('Invalid confirmations requested')
+        reject(new Error('Invalid confirmations requested'))
       }
       requestConfirmations = confirmations
       walletRequest.confirmations = requestConfirmations
@@ -194,6 +194,7 @@ function validateRequest (
       walletRequest.confirmations = requestConfirmations
     }
     walletRequest.callerData = callerData
+
     return resolve(walletRequest)
   })
 }
@@ -213,8 +214,7 @@ app.post('/v1/new', async function (req, res) {
   let walletRequest
 
   if (hashedRequest) {
-    const crypto = new AES({ password: privateRabbitEncryptionKey })
-    const decryptedRequest = await crypto.decrypt(hashedRequest)
+    const decryptedRequest = crypto.decrypt(hashedRequest)
 
     /* Verify for errors and Assemble the data we're passing to the backend workers */
     walletRequest = await validateRequest(
@@ -222,7 +222,7 @@ app.post('/v1/new', async function (req, res) {
       decryptedRequest.callback,
       decryptedRequest.address,
       decryptedRequest.confirmations,
-      decryptedRequest.userDefined
+      decryptedRequest.callerData
     )
   } else {
     /* Verify for errors and Assemble the data we're passing to the backend workers */
@@ -236,6 +236,8 @@ app.post('/v1/new', async function (req, res) {
   }
 
   try {
+    const amount = walletRequest.amount / Math.pow(10, Config.coinDecimals)
+
     /* Generate a random request ID for use by the RPC client */
     const requestId = UUID()
       .toString()
@@ -261,9 +263,9 @@ app.post('/v1/new', async function (req, res) {
         logHTTPRequest(req, JSON.stringify(walletRequest))
         return res.json({
           sendToAddress: sendToAddress,
-          atomicAmount: atomicAmount,
-          amount: atomicAmount / Math.pow(10, Config.coinDecimals),
-          userDefined: callerData,
+          atomicAmount: walletRequest.amount,
+          amount: amount,
+          userDefined: walletRequest.callerData,
           startHeight: workerResponse.scanHeight,
           endHeight: workerResponse.maxHeight,
           confirmations: walletRequest.requestConfirmations,
@@ -275,7 +277,7 @@ app.post('/v1/new', async function (req, res) {
             sendToAddress +
             '?amount=' +
             atomicAmount +
-            (name ? '&name=' + encodeURIComponent(name) : '')
+            ((name) ? '&name=' + encodeURIComponent(name) : '')
         })
       } else if (message !== null) {
         /* There was a message, but it wasn't for us. Let it go back
@@ -326,11 +328,10 @@ app.post('/v1/button/', async function (req, res) {
       confirmations,
       callerData
     )
-    const crypto = new AES({ password: privateRabbitEncryptionKey })
     const encryptRequest = await crypto.encrypt(walletRequest)
-    res.status(200).json(encryptRequest)
+    return res.status(200).json(encryptRequest)
   } catch (e) {
-    res.status(400).send(e)
+    return res.status(400).send(e)
   }
 })
 
