@@ -55,7 +55,7 @@ function toNumber (term) {
 /* We neet to set up our RabbitMQ environment */
 var rabbit
 var channel
-var replyQueue;
+var replyQueue
 (async function () {
   rabbit = await RabbitMQ.connect(
     buildConnectionString(
