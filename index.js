@@ -276,7 +276,7 @@ app.post('/v1/new', async function (req, res) {
             '://' +
             sendToAddress +
             '?amount=' +
-            atomicAmount +
+            walletRequest.amount +
             ((name) ? '&name=' + encodeURIComponent(name) : '')
         })
       } else if (message !== null) {
@@ -316,7 +316,6 @@ app.post('/v1/button/', async function (req, res) {
   const atomicAmount = toNumber(req.body.amount)
   const callback = req.body.callback || false
   const address = req.body.address || false
-  const name = req.body.name || false
   const callerData = req.body.userDefined || {}
   const confirmations = toNumber(req.body.confirmations)
 
