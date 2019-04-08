@@ -153,6 +153,16 @@ function validateNewRequest (req) {
 
   const amount = atomicAmount / Math.pow(10, Config.coinDecimals)
 
+  /* Validate that callerData is an Object */
+  if (typeof callerData !== 'object') {
+    return {
+      error: {
+        message: 'userDefined must be an Object',
+        retCode: 400
+      }
+    }
+  }
+
   /* Validate that the caller has supplied a valid CryptoNote address
      for us to send funds to */
   try {
