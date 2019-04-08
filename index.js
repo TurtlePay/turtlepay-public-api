@@ -310,6 +310,11 @@ app.post('/v1/button', (req, res) => {
   try {
     /* Try to decrypt the data from the button payload */
     const validationResult = crypto.decrypt(encryptedButtonPayload)
+    
+    /* Add to the request if additional userDefined data provided */
+    if(req.body.userDefined) {
+       Object.assign(validationResult.userDefined, req.body.userDefined);
+     } 
 
     /* Try to process the request using the backend workers */
     processNewRequest(validationResult).then((result) => {
