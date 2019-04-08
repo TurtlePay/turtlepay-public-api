@@ -57,17 +57,26 @@ function toNumber (term) {
 /* We neet to set up our RabbitMQ environment */
 var rabbit
 var channel
-var replyQueue
+var replyQueue;
 (async function () {
-  rabbit = await RabbitMQ.connect(buildConnectionString(publicRabbitHost, publicRabbitUsername, publicRabbitPassword))
+  rabbit = await RabbitMQ.connect(
+    buildConnectionString(
+      publicRabbitHost,
+      publicRabbitUsername,
+      publicRabbitPassword
+    )
+  )
   channel = await rabbit.createChannel()
-  replyQueue = await channel.assertQueue('', { exclusive: true, durable: false })
-}())
+  replyQueue = await channel.assertQueue('', {
+    exclusive: true,
+    durable: false
+  })
+})()
 
 /* Let's set up a standard logger. Sure it looks cheap but it's
    reliable and won't crash */
 function log (message) {
-  console.log(util.format('%s: %s', (new Date()).toUTCString(), message))
+  console.log(util.format('%s: %s', new Date().toUTCString(), message))
 }
 
 function logHTTPRequest (req, params) {
@@ -109,7 +118,10 @@ app.use((err, req, res, next) => {
 app.use((req, res, next) => {
   res.header('X-Requested-With', '*')
   res.header('Access-Control-Allow-Origin', Config.corsHeader)
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept'
+  )
   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
   res.header('Cache-Control', 'max-age=30, public')
   next()
@@ -131,33 +143,39 @@ function validateNewRequest (req) {
 
   /* Validate that the caller has specified an amount for the request */
   if (!atomicAmount || atomicAmount === 0 || atomicAmount < 0) {
-    return { error: {
-      message: 'Invalid Amount Supplied',
-      retCode: 400
-    } }
+    return {
+      error: {
+        message: 'Invalid Amount Supplied',
+        retCode: 400
+      }
+    }
   }
 
-  const amount = (atomicAmount / Math.pow(10, Config.coinDecimals))
+  const amount = atomicAmount / Math.pow(10, Config.coinDecimals)
 
   /* Validate that the caller has supplied a valid CryptoNote address
      for us to send funds to */
   try {
     cryptoUtils.decodeAddress(address)
   } catch (e) {
-    return { error: {
-      message: 'Invalid address supplied',
-      retCode: 400
-    } }
+    return {
+      error: {
+        message: 'Invalid address supplied',
+        retCode: 400
+      }
+    }
   }
 
   /* Verify that the caller supplied us with an acceptable callback
      URL that we'll post back to later */
   if (callback) {
     if (callback.substring(0, 4).toLowerCase() !== 'http') {
-      return { error: {
-        message: 'Invalid callback URL supplied',
-        retCode: 400
-      } }
+      return {
+        error: {
+          message: 'Invalid callback URL supplied',
+          retCode: 400
+        }
+      }
     }
   }
 
@@ -169,10 +187,12 @@ function validateNewRequest (req) {
     /* If the caller requested 0 or less or more confirmations than we
        allow, we're going to reject their request */
     if (confirmations < 0 || confirmations > Config.maximumConfirmations) {
-      return { error: {
-        message: 'Invalid confirmations requested',
-        retCode: 400
-      } }
+      return {
+        error: {
+          message: 'Invalid confirmations requested',
+          retCode: 400
+        }
+      }
     }
     requestConfirmations = confirmations
   } else {
@@ -197,8 +217,10 @@ function processNewRequest (validationResult) {
     var cancelTimer
 
     try {
-    /* Generate a random request ID for use by the RPC client */
-      const requestId = UUID().toString().replace(/-/g, '')
+      /* Generate a random request ID for use by the RPC client */
+      const requestId = UUID()
+        .toString()
+        .replace(/-/g, '')
 
       /* Assemble the data we're passing to the backend workers */
       const walletRequest = {
@@ -211,9 +233,12 @@ function processNewRequest (validationResult) {
 
       /* Here, we set up our worker side of the queue to grab the replyQueue
        from the backend workers so we can spit the results back to the client */
-      channel.consume(replyQueue.queue, (message) => {
-      /* If we received a valid message and it matches our request let's tell the caller */
-        if (message !== null && message.properties.correlationId === requestId) {
+      channel.consume(replyQueue.queue, message => {
+        /* If we received a valid message and it matches our request let's tell the caller */
+        if (
+          message !== null &&
+          message.properties.correlationId === requestId
+        ) {
           var workerResponse = JSON.parse(message.content.toString())
           var sendToAddress = workerResponse.address
 
@@ -236,11 +261,20 @@ function processNewRequest (validationResult) {
               endHeight: workerResponse.maxHeight,
               confirmations: validationResult.requestConfirmations,
               callbackPublicKey: workerResponse.publicKey,
-              qrCode: 'https://chart.googleapis.com/chart?cht=qr&chs=256x256&chl=' + Config.coinUri + '://' + sendToAddress + '?amount=' + validationResult.atomicAmount + ((validationResult.name) ? '&name=' + encodeURIComponent(validationResult.name) : '')
+              qrCode:
+                'https://chart.googleapis.com/chart?cht=qr&chs=256x256&chl=' +
+                Config.coinUri +
+                '://' +
+                sendToAddress +
+                '?amount=' +
+                validationResult.atomicAmount +
+                (validationResult.name
+                  ? '&name=' + encodeURIComponent(validationResult.name)
+                  : '')
             }
           })
         } else if (message !== null) {
-        /* There was a message, but it wasn't for us. Let it go back
+          /* There was a message, but it wasn't for us. Let it go back
            in the queue for someone else to handle */
           channel.nack(message)
         }
@@ -248,11 +282,15 @@ function processNewRequest (validationResult) {
 
       /* Send the request to create a wallet to the queue for processing
        by the backend workers and give it a time limit of 2s */
-      channel.sendToQueue(walletQueue, Buffer.from(JSON.stringify(walletRequest)), {
-        correlationId: requestId,
-        replyTo: replyQueue.queue,
-        expiration: 2000
-      })
+      channel.sendToQueue(
+        walletQueue,
+        Buffer.from(JSON.stringify(walletRequest)),
+        {
+          correlationId: requestId,
+          replyTo: replyQueue.queue,
+          expiration: 2000
+        }
+      )
 
       /* Define a timer that if we don't get a response back in 5s or less
        that we need to consider the request failed and let the caller know
@@ -288,7 +326,7 @@ app.post('/v1/new', (req, res) => {
   }
 
   /* Try to process the request using the backend workers */
-  processNewRequest(validationResult).then((result) => {
+  processNewRequest(validationResult).then(result => {
     if (result.error) {
       logHTTPError(req, result.error.message)
       return res.status(result.error.retCode).send()
@@ -310,14 +348,14 @@ app.post('/v1/button', (req, res) => {
   try {
     /* Try to decrypt the data from the button payload */
     const validationResult = crypto.decrypt(encryptedButtonPayload)
-    
+
     /* Add to the request if additional userDefined data provided */
-    if(req.body.userDefined) {
-       Object.assign(validationResult.userDefined, req.body.userDefined);
-     } 
+    if (req.body.userDefined) {
+      Object.assign(validationResult.userDefined, req.body.userDefined)
+    }
 
     /* Try to process the request using the backend workers */
-    processNewRequest(validationResult).then((result) => {
+    processNewRequest(validationResult).then(result => {
       if (result.error) {
         logHTTPError(req, result.error.message)
         return res.status(result.error.retCode).send()
