@@ -1,5 +1,5 @@
-# TurtlePay™: Public API
+# TurtlePay®: Public API
 
-This repository contains the package that provides the Public API for TurtlePay™ services.
+This repository contains the package that provides the Public API for TurtlePay® services.
 
-###### (c) 2018 TurtlePay™ Development Team
+###### (c) 2018-2019 TurtlePay® Development Team
