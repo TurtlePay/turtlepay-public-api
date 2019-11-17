@@ -14,6 +14,7 @@ const Express = require('express')
 const Helmet = require('helmet')
 const Helpers = require('./lib/helpers')
 const RabbitMQ = require('./lib/rabbit')
+const util = require('util')
 
 const walletQueue = 'request.wallet'
 
@@ -22,8 +23,21 @@ const crypto = new AES({ password: process.env.BUTTON_CONTAINER_PASSWORD || '' }
 const rabbit = new RabbitMQ(
   process.env.RABBIT_PUBLIC_SERVER || 'localhost',
   process.env.RABBIT_PUBLIC_USERNAME || '',
-  process.env.RABBIT_PUBLIC_PASSWORD || ''
+  process.env.RABBIT_PUBLIC_PASSWORD || '',
+  true
 )
+
+rabbit.on('log', log => {
+  Helpers.log(util.format('[RABBIT] %s', log))
+})
+
+rabbit.on('connect', () => {
+  Helpers.log(util.format('[RABBIT] connected to server at %s', process.env.RABBIT_PUBLIC_SERVER || 'localhost'))
+})
+
+rabbit.on('disconnect', (error) => {
+  Helpers.log(util.format('[RABBIT] lost connected to server: %s', error.toString()))
+})
 
 /* Set up our database connection */
 const database = new DatabaseBackend({
