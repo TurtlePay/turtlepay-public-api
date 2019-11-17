@@ -19,7 +19,7 @@ const RabbitMQ = require('./lib/rabbit')
 const walletQueue = 'request.wallet'
 
 if (!process.env.NODE_ENV || process.env.NODE_ENV.toLowerCase() !== 'production') {
-  Logger.warning('[WARNING] Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production')
+  Logger.warning('Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production')
 }
 
 const crypto = new AES({ password: process.env.BUTTON_CONTAINER_PASSWORD || '' })
