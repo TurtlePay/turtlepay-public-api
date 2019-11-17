@@ -13,5 +13,6 @@
   "coinDecimals": 2,
   "coinUri": "turtlecoin",
   "defaultConfirmations": 60,
-  "maximumConfirmations": 120
+  "maximumConfirmations": 120,
+  "minimumNetworkTransactionFee": 10
 }
