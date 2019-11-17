@@ -13,10 +13,14 @@ const DatabaseBackend = require('./lib/databaseBackend')
 const Express = require('express')
 const Helmet = require('helmet')
 const Helpers = require('./lib/helpers')
+const Logger = require('./lib/logger')
 const RabbitMQ = require('./lib/rabbit')
-const util = require('util')
 
 const walletQueue = 'request.wallet'
+
+if (!process.env.NODE_ENV || process.env.NODE_ENV.toLowerCase() !== 'production') {
+  Logger.warning('[WARNING] Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production')
+}
 
 const crypto = new AES({ password: process.env.BUTTON_CONTAINER_PASSWORD || '' })
 
@@ -28,15 +32,15 @@ const rabbit = new RabbitMQ(
 )
 
 rabbit.on('log', log => {
-  Helpers.log(util.format('[RABBIT] %s', log))
+  Logger.log('[RABBIT] %s', log)
 })
 
 rabbit.on('connect', () => {
-  Helpers.log(util.format('[RABBIT] connected to server at %s', process.env.RABBIT_PUBLIC_SERVER || 'localhost'))
+  Logger.log('[RABBIT] connected to server at %s', process.env.RABBIT_PUBLIC_SERVER || 'localhost')
 })
 
 rabbit.on('disconnect', (error) => {
-  Helpers.log(util.format('[RABBIT] lost connected to server: %s', error.toString()))
+  Logger.error('[RABBIT] lost connected to server: %s', error.toString())
 })
 
 /* Set up our database connection */
@@ -49,7 +53,7 @@ const database = new DatabaseBackend({
   connectionLimit: Config.mysql.connectionLimit
 })
 
-Helpers.log('Connected to database backend at ' + database.host + ':' + database.port)
+Logger.log('Connected to database backend at %s:%s', database.host, database.port)
 
 const app = Express()
 
@@ -175,10 +179,10 @@ app.all('*', (request, response) => {
 rabbit.connect()
   .then(() => {
     app.listen(Config.httpPort, Config.bindIp, () => {
-      Helpers.log('HTTP server started on ' + Config.bindIp + ':' + Config.httpPort)
+      Logger.log('HTTP server started on %s:%s', Config.bindIp, Config.httpPort)
     })
   })
   .catch(error => {
-    Helpers.log('Error in rabbit connection: ' + error.toString())
+    Logger.log('Error in rabbit connection: %s', error.toString())
     process.exit(1)
   })
