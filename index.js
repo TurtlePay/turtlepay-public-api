@@ -97,9 +97,7 @@ app.post('/v1/new', (request, response) => {
 
       return Helpers.Processor.validate(request)
     })
-    .then(validation => {
-      return Helpers.Processor.process(rabbit, walletQueue, validation)
-    })
+    .then(validation => { return Helpers.Processor.process(rabbit, walletQueue, validation) })
     .then(result => {
       Helpers.logHTTPRequest(request, result.logMessage, process.hrtime(start))
 
@@ -167,6 +165,80 @@ app.post('/v1/button/new', (request, response) => {
 
       return Helpers.Processor.validate(request)
     })
+    .then(validation => {
+      const buttonPayload = crypto.encrypt(validation)
+
+      Helpers.logHTTPRequest(request, JSON.stringify(validation), process.hrtime(start))
+
+      return response.json({ buttonPayload })
+    })
+    .catch(error => {
+      Helpers.logHTTPError(request, error.toString(), process.hrtime(start))
+
+      const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
+
+      return response.status(code).send()
+    })
+})
+
+app.post('/v2/new', (request, response) => {
+  const start = process.hrtime()
+
+  return Helpers.Processor.validatev2(request)
+    .then(validation => { return Helpers.Processor.processv2(rabbit, walletQueue, validation) })
+    .then(result => {
+      Helpers.logHTTPRequest(request, result.logMessage, process.hrtime(start))
+
+      return response.json(result.response)
+    })
+    .catch(error => {
+      Helpers.logHTTPError(request, error.toString(), process.hrtime(start))
+
+      const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
+
+      return response.status(code).send()
+    })
+})
+
+app.post('/v2/button', (request, response) => {
+  const start = process.hrtime()
+
+  const encryptedButtonPayload = request.body.buttonPayload || false
+  const callerData = request.body.userDefined || {}
+
+  if (!encryptedButtonPayload) {
+    Helpers.logHTTPError(request, 'No button payload provided', process.hrtime(start))
+
+    return response.status(400).send()
+  }
+
+  /* Try to decrypt the data from the button payload */
+  const validationresponse = crypto.decrypt(encryptedButtonPayload)
+
+  return Promise.resolve(validationresponse)
+    .then(validation => {
+      if (!validation) throw new Error('Invalid button payload provided')
+
+      Object.assign(validation.callerData, callerData)
+
+      return Helpers.Processor.processv2(rabbit, walletQueue, validation)
+    })
+    .then(result => {
+      Helpers.logHTTPRequest(request, result.logMessage, process.hrtime(start))
+
+      return response.json(result.response)
+    })
+    .catch(error => {
+      const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
+
+      return response.status(code).send()
+    })
+})
+
+app.post('/v2/button/new', (request, response) => {
+  const start = process.hrtime()
+
+  return Helpers.Processor.validatev2(request)
     .then(validation => {
       const buttonPayload = crypto.encrypt(validation)
 
