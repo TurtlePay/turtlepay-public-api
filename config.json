@@ -14,5 +14,7 @@
   "coinUri": "turtlecoin",
   "defaultConfirmations": 60,
   "maximumConfirmations": 120,
-  "minimumNetworkTransactionFee": 10
+  "minimumNetworkTransactionFee": 10,
+  "nodeURL": "https://blockapi.turtlepay.io",
+  "v1DeactivationHeight": 2199850
 }

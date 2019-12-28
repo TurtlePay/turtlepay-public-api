@@ -89,7 +89,14 @@ app.use(Compression())
 app.post('/v1/new', (request, response) => {
   const start = process.hrtime()
 
-  return Helpers.Processor.validate(request)
+  /* v1 API calls will be disabled just before the network upgrade
+     at block height 2,200,000 */
+  return Helpers.networkHeight()
+    .then(networkHeight => {
+      if (networkHeight >= Config.v1DeactivationHeight) throw new Error('Invalid call due to v1 deprecation')
+
+      return Helpers.Processor.validate(request)
+    })
     .then(validation => {
       return Helpers.Processor.process(rabbit, walletQueue, validation)
     })
@@ -122,7 +129,14 @@ app.post('/v1/button', (request, response) => {
   /* Try to decrypt the data from the button payload */
   const validationresponse = crypto.decrypt(encryptedButtonPayload)
 
-  Promise.resolve(validationresponse)
+  /* v1 API calls will be disabled just before the network upgrade
+     at block height 2,200,000 */
+  return Helpers.networkHeight()
+    .then(networkHeight => {
+      if (networkHeight >= Config.v1DeactivationHeight) throw new Error('Invalid call due to v1 deprecation')
+
+      return Promise.resolve(validationresponse)
+    })
     .then(validation => {
       if (!validation) throw new Error('Invalid button payload provided')
 
@@ -145,7 +159,14 @@ app.post('/v1/button', (request, response) => {
 app.post('/v1/button/new', (request, response) => {
   const start = process.hrtime()
 
-  return Helpers.Processor.validate(request)
+  /* v1 API calls will be disabled just before the network upgrade
+     at block height 2,200,000 */
+  return Helpers.networkHeight()
+    .then(networkHeight => {
+      if (networkHeight >= Config.v1DeactivationHeight) throw new Error('Invalid call due to v1 deprecation')
+
+      return Helpers.Processor.validate(request)
+    })
     .then(validation => {
       const buttonPayload = crypto.encrypt(validation)
 
