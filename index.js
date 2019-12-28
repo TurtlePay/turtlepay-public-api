@@ -190,10 +190,6 @@ app.options('*', (request, response) => {
 
 /* This is our catch all to return a 404-error */
 app.all('*', (request, response) => {
-  const start = process.hrtime()
-
-  Helpers.logHTTPError(request, 'Requested URL not Found (404)', process.hrtime(start))
-
   return response.status(404).send()
 })
 
