@@ -63,7 +63,7 @@ app.use(BodyParser.json())
 /* Catch body-parser errors */
 app.use((err, request, response, next) => {
   if (err instanceof SyntaxError) {
-    return response.status(400).send()
+    return response.status(400).json({ message: 'Invalid JSON body detected' })
   }
   next()
 })
@@ -108,7 +108,7 @@ app.post('/v1/new', (request, response) => {
 
       const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
 
-      return response.status(code).send()
+      return response.status(code).json({ message: error.toString() })
     })
 })
 
@@ -121,7 +121,7 @@ app.post('/v1/button', (request, response) => {
   if (!encryptedButtonPayload) {
     Helpers.logHTTPError(request, 'No button payload provided', process.hrtime(start))
 
-    return response.status(400).send()
+    return response.status(400).json({ message: 'No button payload provided' })
   }
 
   /* Try to decrypt the data from the button payload */
@@ -150,7 +150,7 @@ app.post('/v1/button', (request, response) => {
     .catch(error => {
       const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
 
-      return response.status(code).send()
+      return response.status(code).json({ message: error.toString() })
     })
 })
 
@@ -177,7 +177,7 @@ app.post('/v1/button/new', (request, response) => {
 
       const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
 
-      return response.status(code).send()
+      return response.status(code).json({ message: error.toString() })
     })
 })
 
@@ -196,7 +196,7 @@ app.post('/v2/new', (request, response) => {
 
       const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
 
-      return response.status(code).send()
+      return response.status(code).json({ message: error.toString() })
     })
 })
 
@@ -209,7 +209,7 @@ app.post('/v2/button', (request, response) => {
   if (!encryptedButtonPayload) {
     Helpers.logHTTPError(request, 'No button payload provided', process.hrtime(start))
 
-    return response.status(400).send()
+    return response.status(400).json({ message: 'No button payload provided' })
   }
 
   /* Try to decrypt the data from the button payload */
@@ -231,7 +231,7 @@ app.post('/v2/button', (request, response) => {
     .catch(error => {
       const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
 
-      return response.status(code).send()
+      return response.status(code).json({ message: error.toString() })
     })
 })
 
@@ -251,7 +251,7 @@ app.post('/v2/button/new', (request, response) => {
 
       const code = (error.toString().toLowerCase().indexOf('invalid') !== -1) ? 400 : 500
 
-      return response.status(code).send()
+      return response.status(code).json({ message: error.toString() })
     })
 })
 
