@@ -255,6 +255,10 @@ app.post('/v2/button/new', (request, response) => {
     })
 })
 
+app.get('/status', (request, response) => {
+  return response.status(200).send()
+})
+
 /* response to options requestuests for preflights */
 app.options('*', (request, response) => {
   return response.status(200).send()
